@@ -1,18 +1,6 @@
-﻿using Firebase;
-using Firebase.Database;
-using Firebase.Unity.Editor;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-
-public class Block
-{
-    public double X { get; set; }
-    public double Y { get; set; }
-    public double Z { get; set; }
-    public int BlockType { get; set; }
-    public string CreatedBy { get; set; }
-}
 
 public class CharacterInput : MonoBehaviour
 {
@@ -24,41 +12,16 @@ public class CharacterInput : MonoBehaviour
 
     public GameObject Dot;
 
-    DatabaseReference databaseReference;
-
+    BlocksService blocksService;
     string userId;
 
     // Use this for initialization
     void Start()
     {
-        FirebaseApp.DefaultInstance.SetEditorDatabaseUrl(AppSettings.FireBaseUrl);
-        databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
-
         blockPoints = new List<Vector3>();
-
         userId = System.Guid.NewGuid().ToString();
-
-        databaseReference.Child("timestamp").SetValueAsync(System.DateTime.Now.ToString());
-        databaseReference.Child("blocks").ChildAdded += HandleBlocksAdded;
-    }
-
-    void HandleBlocksAdded(object sender, ChildChangedEventArgs args)
-    {
-        if (args.DatabaseError != null)
-        {
-            Debug.LogError(args.DatabaseError.Message);
-            return;
-        }
-
-        string blockString = args.Snapshot.Value.ToString();
-        string[] blockArray = blockString.Split('|');
-        float x = float.Parse(blockArray[1]);
-        float y = float.Parse(blockArray[2]);
-        float z = float.Parse(blockArray[3]);
-        string blockUserId = blockArray[4];
-
-        Vector3 aPoint = new Vector3(x, y, z);
-        instantiateBlock(aPoint);
+        blocksService = new BlocksService(this, userId);
+        blocksService.Start();
     }
 
     bool blockExistsAtPoint(Vector3 aPoint)
@@ -74,7 +37,7 @@ public class CharacterInput : MonoBehaviour
         return false;
     }
 
-    GameObject instantiateBlock(Vector3 position)
+    public GameObject InstantiateBlock(Vector3 position)
     {
         if (position.y < 0 && !blockExistsAtPoint(position))
         {
@@ -205,31 +168,14 @@ public class CharacterInput : MonoBehaviour
             pointRounted.z = (float)(System.Math.Ceiling(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
         }
 
-        GameObject newBlock = instantiateBlock(pointRounted);
-        writeBlockToDatabase(newBlock);
+        GameObject newBlock = InstantiateBlock(pointRounted);
+        blocksService.WriteBlockToDatabase(newBlock);
     }
 
-
-    void writeBlockToDatabase(GameObject aBlock)
-    {
-        if (aBlock == null)
-            return;
-
-        string blockData = string.Format("block|{0}|{1}|{2}|{3}|{4}",
-            aBlock.transform.position.x,
-            aBlock.transform.position.y,
-            aBlock.transform.position.z,
-            0,
-            userId
-        );
-
-        databaseReference.Child("blocks").Child(aBlock.name).SetValueAsync(blockData);
-    }
-
-    void removeBlockFromDatabase(string blockId)
-    {
-        var blockNode = databaseReference.Child("/blocks/" + blockId);
-        blockNode.RemoveValueAsync();
+    public void RemoveBlock(string name){
+        var block = GameObject.Find(name);
+        if(block != null)
+            Destroy(block);
     }
 
     void Update()
@@ -253,7 +199,7 @@ public class CharacterInput : MonoBehaviour
                 {
                     Debug.Log("Delete object!");
                     Destroy(block);
-                    removeBlockFromDatabase(block.name);
+                    blocksService.RemoveBlockFromDatabase(block.name);
                 }
             }
         }
