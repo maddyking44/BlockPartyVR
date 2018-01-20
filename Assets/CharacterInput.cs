@@ -31,7 +31,7 @@ public class CharacterInput : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        FirebaseApp.DefaultInstance.SetEditorDatabaseUrl("https://changeme.firebaseio.com/");
+        FirebaseApp.DefaultInstance.SetEditorDatabaseUrl(AppSettings.FireBaseUrl);
         databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
 
         blockPoints = new List<Vector3>();
@@ -91,7 +91,6 @@ public class CharacterInput : MonoBehaviour
 
     void placeBlockAtHitPoint(RaycastHit hit)
     {
-
         Vector3 point = hit.point;
         Vector3 MyNormal = hit.normal;
 
@@ -105,11 +104,11 @@ public class CharacterInput : MonoBehaviour
         float partialX = point.x / SnapFactors.x - Mathf.Floor(point.x / SnapFactors.x);
         float partialY = point.y / SnapFactors.y - Mathf.Floor(point.y / SnapFactors.x);
         float partialZ = point.z / SnapFactors.z - Mathf.Floor(point.z / SnapFactors.x);
+        Vector3 pointRounted = new Vector3();
 
         if (MyNormal == hit.transform.up)
         {
             Debug.Log("top");
-            Vector3 pointRounted;
             if (partialX > 0.5f)
                 pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
             else
@@ -125,14 +124,10 @@ public class CharacterInput : MonoBehaviour
             {
                 pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
             }
-
-            GameObject newBlock = instantiateBlock(pointRounted);
-            writeBlockToDatabase(newBlock);
         }
         else if (MyNormal == -hit.transform.up) //important note the use of the '-' sign this inverts the direction, -up == down. Down doesn't exist as a stored direction, you invert up to get it. 
         {
             Debug.Log("bottom");
-            Vector3 pointRounted;
             if (partialX > 0.5f)
                 pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
             else
@@ -148,14 +143,10 @@ public class CharacterInput : MonoBehaviour
             {
                 pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
             }
-
-            GameObject newBlock = instantiateBlock(pointRounted);
-            writeBlockToDatabase(newBlock);
         }
         else if (MyNormal == hit.transform.right)
         {
-            Debug.Log("right");
-            Vector3 pointRounted;
+            Debug.Log("hit from right");
             pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
             pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
             if (partialZ > 0.5f)
@@ -166,14 +157,10 @@ public class CharacterInput : MonoBehaviour
             {
                 pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
             }
-
-            GameObject newBlock = instantiateBlock(pointRounted);
-            writeBlockToDatabase(newBlock);
         }
         else if (MyNormal == -hit.transform.right) //note the '-' sign converting right to left
         {
-            Debug.Log("left");
-            Vector3 pointRounted;
+            Debug.Log("hit from left");
             pointRounted.x = (float)(System.Math.Floor(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
             pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
 
@@ -185,14 +172,10 @@ public class CharacterInput : MonoBehaviour
             {
                 pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
             }
-
-            GameObject newBlock = instantiateBlock(pointRounted);
-            writeBlockToDatabase(newBlock);
         }
         else if (MyNormal == -hit.transform.forward)
         {
-            Debug.Log("forward");
-            Vector3 pointRounted;
+            Debug.Log("hit from forward");
             if (partialX > 0.5f)
             {
                 pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
@@ -205,13 +188,10 @@ public class CharacterInput : MonoBehaviour
             pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
             pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
 
-            GameObject newBlock = instantiateBlock(pointRounted);
-            writeBlockToDatabase(newBlock);
         }
         else if (MyNormal == hit.transform.forward)
         {
-            Debug.Log("behind");
-            Vector3 pointRounted;
+            Debug.Log("hit from behind");
             if (partialX > 0.5f)
             {
                 pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
@@ -223,10 +203,10 @@ public class CharacterInput : MonoBehaviour
 
             pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
             pointRounted.z = (float)(System.Math.Ceiling(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-
-            GameObject newBlock = instantiateBlock(pointRounted);
-            writeBlockToDatabase(newBlock);
         }
+
+        GameObject newBlock = instantiateBlock(pointRounted);
+        writeBlockToDatabase(newBlock);
     }
 
 
@@ -244,8 +224,6 @@ public class CharacterInput : MonoBehaviour
         );
 
         databaseReference.Child("blocks").Child(aBlock.name).SetValueAsync(blockData);
-
-        Debug.Log("blocked stored!");
     }
 
     void removeBlockFromDatabase(string blockId)
@@ -283,10 +261,5 @@ public class CharacterInput : MonoBehaviour
         {
             Dot.SetActive(false); ;
         }
-
-
-
-
-
     }
 }
