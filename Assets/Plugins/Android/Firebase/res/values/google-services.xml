@@ -1,0 +1,11 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+  <string name="firebase_database_url" translatable="false">https://block-party-13fbe.firebaseio.com</string>
+  <string name="gcm_defaultSenderId" translatable="false">506758340295</string>
+  <string name="google_storage_bucket" translatable="false">block-party-13fbe.appspot.com</string>
+  <string name="project_id" translatable="false">block-party-13fbe</string>
+  <string name="google_api_key" translatable="false">AIzaSyCvgMBCxDPDRkyo7AOJeYvsQNagIQH-rfU</string>
+  <string name="google_crash_reporting_api_key" translatable="false">AIzaSyCvgMBCxDPDRkyo7AOJeYvsQNagIQH-rfU</string>
+  <string name="google_app_id" translatable="false">1:506758340295:android:a59804395738b1b6</string>
+  <string name="default_web_client_id" translatable="false">506758340295-n2jihke58sljgo1reug9tk3ubof5ou62.apps.googleusercontent.com</string>
+</resources>
