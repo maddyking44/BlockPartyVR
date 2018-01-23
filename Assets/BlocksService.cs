@@ -57,17 +57,17 @@ public class BlocksService
 
     void HandleBlocksRemoved(object sender, ChildChangedEventArgs args)
     {
-        this.WriteDebugMessage("HandleBlocksRemoved - a");
+        this.WriteDebugMessage("a - HandleBlocksRemoved");
         if (args.DatabaseError != null)
         {
             Debug.LogError(args.DatabaseError.Message);
             return;
         }
 
-        this.WriteDebugMessage("HandleBlocksRemoved - b");
+        this.WriteDebugMessage("b - HandleBlocksRemoved - b");
 
         if(BlockRemoved != null){
-            this.WriteDebugMessage("HandleBlocksRemoved - c");
+            this.WriteDebugMessage("c - HandleBlocksRemoved");
             BlockRemoved(this, new BlockRemoveEventArgs(args.Snapshot.Key));
         }
 

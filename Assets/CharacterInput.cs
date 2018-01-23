@@ -33,27 +33,28 @@ public class CharacterInput : MonoBehaviour
 
     void handleBlockRemoved(object sender, BlockRemoveEventArgs args)
     {
-        blocksService.WriteDebugMessage("HandleBlocksRemoved - d");
-        //UnityMainThreadDispatcher.Instance().Enqueue(RemoveBlockOnTheMainThread(args.Name));
+        blocksService.WriteDebugMessage("d - HandleBlocksRemoved");
         blocksService.WriteDebugMessage("block to kill - " + args.Name);
         RemoveBlock(args.Name);
     }
 
-    public IEnumerator RemoveBlockOnTheMainThread(string blockName) {
-        blocksService.WriteDebugMessage("HandleBlocksRemoved - e");
+    public IEnumerator RemoveBlockOnTheMainThread(GameObject block) {
+        blocksService.WriteDebugMessage("g - HandleBlocksRemoved");
 
-        RemoveBlock(blockName);
+        Destroy(block);
+        blocksService.WriteDebugMessage("block removed!");
         yield return null;
     }
     
     public void RemoveBlock(string name)
     {
-        blocksService.WriteDebugMessage("HandleBlocksRemoved - f0");
-        var block = getBlockByName(name);
-        blocksService.WriteDebugMessage("HandleBlocksRemoved - f1");
+        blocksService.WriteDebugMessage("f0 -HandleBlocksRemoved");
+        var block = GameObject.Find(name);
+        blocksService.WriteDebugMessage("f1 - HandleBlocksRemoved");
         if (block != null) {
-            blocksService.WriteDebugMessage("HandleBlocksRemoved - f2");
-            Destroy(block);
+            blocksService.WriteDebugMessage("f2 -HandleBlocksRemoved");
+            blocks.Remove(block);
+            UnityMainThreadDispatcher.Instance().Enqueue(RemoveBlockOnTheMainThread(block));
         }
     }
 
