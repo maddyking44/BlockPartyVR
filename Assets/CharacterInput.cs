@@ -8,7 +8,7 @@ public class CharacterInput : MonoBehaviour
     public GameObject MyBlock;
     public Vector3 SnapFactors;
     public Vector3 OffsetFactors;
-    List<Vector3> blockPoints;
+    List<GameObject> blocks;
 
     public GameObject Dot;
 
@@ -18,23 +18,71 @@ public class CharacterInput : MonoBehaviour
     // Use this for initialization
     void Start()
     {
-        blockPoints = new List<Vector3>();
+        blocks = new List<GameObject>();
         userId = System.Guid.NewGuid().ToString();
-        blocksService = new BlocksService(this, userId);
+        blocksService = new BlocksService(userId);
+        blocksService.BlockAdded += new BlockAddEventHandler(handleBlockAdded);
+        blocksService.BlockRemoved += new BlockRemoveEventHandler(handleBlockRemoved);
         blocksService.Start();
+    }
+
+    void handleBlockAdded(object sender, BlockAddEventArgs args)
+    {
+        InstantiateBlock(args.BlockLocation);
+    }
+
+    void handleBlockRemoved(object sender, BlockRemoveEventArgs args)
+    {
+        blocksService.WriteDebugMessage("HandleBlocksRemoved - d");
+        //UnityMainThreadDispatcher.Instance().Enqueue(RemoveBlockOnTheMainThread(args.Name));
+        blocksService.WriteDebugMessage("block to kill - " + args.Name);
+        RemoveBlock(args.Name);
+    }
+
+    public IEnumerator RemoveBlockOnTheMainThread(string blockName) {
+        blocksService.WriteDebugMessage("HandleBlocksRemoved - e");
+
+        RemoveBlock(blockName);
+        yield return null;
+    }
+    
+    public void RemoveBlock(string name)
+    {
+        blocksService.WriteDebugMessage("HandleBlocksRemoved - f0");
+        var block = getBlockByName(name);
+        blocksService.WriteDebugMessage("HandleBlocksRemoved - f1");
+        if (block != null) {
+            blocksService.WriteDebugMessage("HandleBlocksRemoved - f2");
+            Destroy(block);
+        }
     }
 
     bool blockExistsAtPoint(Vector3 aPoint)
     {
-        foreach (Vector3 p in blockPoints)
+        foreach (var block in blocks)
         {
-            if (aPoint.x == p.x && aPoint.y == p.y && aPoint.z == p.z)
+            var blockPosition = block.transform.position;
+            if (aPoint.x == blockPosition.x && 
+                aPoint.y == blockPosition.y && 
+                aPoint.z == blockPosition.z)
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    GameObject getBlockByName(string name){
+        foreach (GameObject gameObject in blocks)
+        {
+            if (gameObject.name == name)
+            {
+                return gameObject;
+            }
+        }
+
+        return null;
     }
 
     public GameObject InstantiateBlock(Vector3 position)
@@ -47,7 +95,7 @@ public class CharacterInput : MonoBehaviour
         GameObject newBlock = (GameObject)Instantiate(MyBlock, position, Quaternion.identity);
         newBlock.name = System.Guid.NewGuid().ToString();
         newBlock.tag = "my_block";
-        blockPoints.Add(position);
+        blocks.Add(newBlock);
 
         return newBlock;
     }
@@ -172,11 +220,7 @@ public class CharacterInput : MonoBehaviour
         blocksService.WriteBlockToDatabase(newBlock);
     }
 
-    public void RemoveBlock(string name){
-        var block = GameObject.Find(name);
-        if(block != null)
-            Destroy(block);
-    }
+
 
     void Update()
     {

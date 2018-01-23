@@ -4,23 +4,34 @@ using Firebase.Database;
 using Firebase.Unity.Editor;
 using UnityEngine;
 
+
+
+
+
+
 public class BlocksService
 {
     DatabaseReference databaseReference;
-    CharacterInput _characterInputBehavior;
+    public event BlockAddEventHandler BlockAdded;
+    public event BlockRemoveEventHandler BlockRemoved;
+
     string _userId;
 
-    public BlocksService(CharacterInput characterInputBehavior, string userId){
-        _characterInputBehavior = characterInputBehavior;
+    public BlocksService(string userId)
+    {
         _userId = userId;
     }
 
-    public void Start(){
+    public void Start()
+    {
         FirebaseApp.DefaultInstance.SetEditorDatabaseUrl(AppSettings.FireBaseUrl);
         databaseReference = FirebaseDatabase.DefaultInstance.RootReference;
-        databaseReference.Child("timestamp").SetValueAsync(System.DateTime.Now.ToString());
+
         databaseReference.Child("blocks").ChildAdded += HandleBlocksAdded;
         databaseReference.Child("blocks").ChildRemoved += HandleBlocksRemoved;
+
+
+        this.WriteDebugMessage("User " + _userId + " started");
     }
 
     void HandleBlocksAdded(object sender, ChildChangedEventArgs args)
@@ -39,20 +50,29 @@ public class BlocksService
         string blockUserId = blockArray[4];
 
         Vector3 aPoint = new Vector3(x, y, z);
-        _characterInputBehavior.InstantiateBlock(aPoint);
+        if(BlockAdded != null){
+            BlockAdded(this, new BlockAddEventArgs(aPoint));
+        }
     }
 
     void HandleBlocksRemoved(object sender, ChildChangedEventArgs args)
     {
+        this.WriteDebugMessage("HandleBlocksRemoved - a");
         if (args.DatabaseError != null)
         {
             Debug.LogError(args.DatabaseError.Message);
             return;
         }
 
-        _characterInputBehavior.RemoveBlock(args.Snapshot.Key);
+        this.WriteDebugMessage("HandleBlocksRemoved - b");
+
+        if(BlockRemoved != null){
+            this.WriteDebugMessage("HandleBlocksRemoved - c");
+            BlockRemoved(this, new BlockRemoveEventArgs(args.Snapshot.Key));
+        }
+
     }
-   
+
     public void WriteBlockToDatabase(GameObject aBlock)
     {
         if (aBlock == null)
@@ -68,6 +88,14 @@ public class BlocksService
 
         databaseReference.Child("blocks").Child(aBlock.name).SetValueAsync(blockData);
     }
+
+     public void WriteDebugMessage(string message)
+    {
+        if (message == null)
+            return;
+
+        databaseReference.Child("debug_log").Push().SetValueAsync(message);
+    }   
 
     public void RemoveBlockFromDatabase(string blockId)
     {
