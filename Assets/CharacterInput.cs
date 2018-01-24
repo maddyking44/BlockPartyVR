@@ -9,6 +9,7 @@ public class CharacterInput : MonoBehaviour
     public Vector3 SnapFactors;
     public Vector3 OffsetFactors;
     List<GameObject> blocks;
+    Queue<GameObject> blocksToDestroy;
 
     public GameObject Dot;
 
@@ -19,6 +20,7 @@ public class CharacterInput : MonoBehaviour
     void Start()
     {
         blocks = new List<GameObject>();
+        blocksToDestroy = new Queue<GameObject>();
         userId = System.Guid.NewGuid().ToString();
         blocksService = new BlocksService(userId);
         blocksService.BlockAdded += new BlockAddEventHandler(handleBlockAdded);
@@ -38,11 +40,14 @@ public class CharacterInput : MonoBehaviour
         RemoveBlock(args.Name);
     }
 
-    public IEnumerator RemoveBlockOnTheMainThread(GameObject block) {
-        blocksService.WriteDebugMessage("g - HandleBlocksRemoved");
+    public IEnumerator RemoveBlockOnTheMainThread() {
 
-        Destroy(block);
-        blocksService.WriteDebugMessage("block removed!");
+        while(blocksToDestroy.Count > 0){
+            GameObject obj = blocksToDestroy.Dequeue();
+            Destroy(obj);
+            blocks.Remove(obj);
+        }
+
         yield return null;
     }
     
@@ -53,8 +58,13 @@ public class CharacterInput : MonoBehaviour
         blocksService.WriteDebugMessage("f1 - HandleBlocksRemoved");
         if (block != null) {
             blocksService.WriteDebugMessage("f2 -HandleBlocksRemoved");
-            blocks.Remove(block);
-            UnityMainThreadDispatcher.Instance().Enqueue(RemoveBlockOnTheMainThread(block));
+            
+            
+            blocksToDestroy.Enqueue(block);
+            UnityMainThreadDispatcher.Instance().Enqueue(RemoveBlockOnTheMainThread()); 
+            
+
+            blocksService.WriteDebugMessage("f3 -HandleBlocksRemoved");
         }
     }
 
@@ -74,17 +84,7 @@ public class CharacterInput : MonoBehaviour
         return false;
     }
 
-    GameObject getBlockByName(string name){
-        foreach (GameObject gameObject in blocks)
-        {
-            if (gameObject.name == name)
-            {
-                return gameObject;
-            }
-        }
 
-        return null;
-    }
 
     public GameObject InstantiateBlock(Vector3 position)
     {
@@ -252,5 +252,8 @@ public class CharacterInput : MonoBehaviour
         {
             Dot.SetActive(false); ;
         }
+
+
+
     }
 }
