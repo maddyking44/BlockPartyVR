@@ -31,7 +31,7 @@ public class BlocksService
         databaseReference.Child("blocks").ChildRemoved += HandleBlocksRemoved;
 
 
-        this.WriteDebugMessage("User " + _userId + " started");
+        this.WriteDebugMessage("User " + _userId + " started at " + System.DateTime.Now);
     }
 
     void HandleBlocksAdded(object sender, ChildChangedEventArgs args)
@@ -57,17 +57,13 @@ public class BlocksService
 
     void HandleBlocksRemoved(object sender, ChildChangedEventArgs args)
     {
-        this.WriteDebugMessage("a - HandleBlocksRemoved");
         if (args.DatabaseError != null)
         {
             Debug.LogError(args.DatabaseError.Message);
             return;
         }
 
-        this.WriteDebugMessage("b - HandleBlocksRemoved - b");
-
         if(BlockRemoved != null){
-            this.WriteDebugMessage("c - HandleBlocksRemoved");
             BlockRemoved(this, new BlockRemoveEventArgs(args.Snapshot.Key));
         }
 
@@ -89,7 +85,7 @@ public class BlocksService
         databaseReference.Child("blocks").Child(aBlock.name).SetValueAsync(blockData);
     }
 
-     public void WriteDebugMessage(string message)
+    public void WriteDebugMessage(string message)
     {
         if (message == null)
             return;

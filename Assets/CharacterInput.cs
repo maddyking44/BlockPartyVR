@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class CharacterInput : MonoBehaviour
 {
@@ -8,19 +9,15 @@ public class CharacterInput : MonoBehaviour
     public GameObject MyBlock;
     public Vector3 SnapFactors;
     public Vector3 OffsetFactors;
-    List<GameObject> blocks;
-    Queue<GameObject> blocksToDestroy;
-
     public GameObject Dot;
 
     BlocksService blocksService;
     string userId;
+    List<GameObject> blocks;
 
-    // Use this for initialization
     void Start()
     {
         blocks = new List<GameObject>();
-        blocksToDestroy = new Queue<GameObject>();
         userId = System.Guid.NewGuid().ToString();
         blocksService = new BlocksService(userId);
         blocksService.BlockAdded += new BlockAddEventHandler(handleBlockAdded);
@@ -35,36 +32,21 @@ public class CharacterInput : MonoBehaviour
 
     void handleBlockRemoved(object sender, BlockRemoveEventArgs args)
     {
-        blocksService.WriteDebugMessage("d - HandleBlocksRemoved");
-        blocksService.WriteDebugMessage("block to kill - " + args.Name);
         RemoveBlock(args.Name);
     }
 
-    public IEnumerator RemoveBlockOnTheMainThread() {
-
-        while(blocksToDestroy.Count > 0){
-            GameObject obj = blocksToDestroy.Dequeue();
-            Destroy(obj);
-            blocks.Remove(obj);
-        }
-
-        yield return null;
+    GameObject getBlockByName(string name)
+    {
+        return blocks.Where(b => b.name == name).FirstOrDefault();
     }
-    
+
     public void RemoveBlock(string name)
     {
-        blocksService.WriteDebugMessage("f0 -HandleBlocksRemoved");
-        var block = GameObject.Find(name);
-        blocksService.WriteDebugMessage("f1 - HandleBlocksRemoved");
-        if (block != null) {
-            blocksService.WriteDebugMessage("f2 -HandleBlocksRemoved");
-            
-            
-            blocksToDestroy.Enqueue(block);
-            UnityMainThreadDispatcher.Instance().Enqueue(RemoveBlockOnTheMainThread()); 
-            
-
-            blocksService.WriteDebugMessage("f3 -HandleBlocksRemoved");
+        var block = getBlockByName(name);
+        if (block != null)
+        {
+            blocks.Remove(block);
+            GameObject.Destroy(block);
         }
     }
 
@@ -73,8 +55,8 @@ public class CharacterInput : MonoBehaviour
         foreach (var block in blocks)
         {
             var blockPosition = block.transform.position;
-            if (aPoint.x == blockPosition.x && 
-                aPoint.y == blockPosition.y && 
+            if (aPoint.x == blockPosition.x &&
+                aPoint.y == blockPosition.y &&
                 aPoint.z == blockPosition.z)
             {
                 return true;
@@ -84,11 +66,9 @@ public class CharacterInput : MonoBehaviour
         return false;
     }
 
-
-
     public GameObject InstantiateBlock(Vector3 position)
     {
-        if (position.y < 0 && !blockExistsAtPoint(position))
+        if (blockExistsAtPoint(position))
         {
             return null;
         }
@@ -221,8 +201,6 @@ public class CharacterInput : MonoBehaviour
         blocksService.WriteBlockToDatabase(newBlock);
     }
 
-
-
     void Update()
     {
         RaycastHit hit;
@@ -233,16 +211,17 @@ public class CharacterInput : MonoBehaviour
             Dot.SetActive(true);
             Dot.transform.position = hit.point;
 
-            if (Input.GetKeyDown(KeyCode.Space))
+            if (Input.GetKeyUp(KeyCode.Space))
             {
                 placeBlockAtHitPoint(hit);
             }
-            else if (Input.GetKeyDown("c"))
+            else if (Input.GetKeyUp(KeyCode.Delete))
             {
                 var block = hit.collider.gameObject;
                 if (block.tag == "my_block")
                 {
                     Debug.Log("Delete object!");
+                    blocks.Remove(block);
                     Destroy(block);
                     blocksService.RemoveBlockFromDatabase(block.name);
                 }
@@ -252,8 +231,5 @@ public class CharacterInput : MonoBehaviour
         {
             Dot.SetActive(false); ;
         }
-
-
-
     }
 }
