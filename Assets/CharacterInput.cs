@@ -6,7 +6,12 @@ using System.Linq;
 public class CharacterInput : MonoBehaviour
 {
 
-    public GameObject MyBlock;
+    public GameObject Block0;
+    public GameObject Block1;
+    public GameObject Block2;
+    public GameObject Block3;
+    public GameObject Block4;
+
     public Vector3 SnapFactors;
     public Vector3 OffsetFactors;
     public GameObject Dot;
@@ -14,6 +19,10 @@ public class CharacterInput : MonoBehaviour
     BlocksService blocksService;
     string userId;
     List<GameObject> blocks;
+
+    BlockUtilities blockUtilities;
+
+    Dictionary<int, GameObject> blockTypeToGameObject;
 
     void Start()
     {
@@ -23,15 +32,26 @@ public class CharacterInput : MonoBehaviour
         blocksService.BlockAdded += new BlockAddEventHandler(handleBlockAdded);
         blocksService.BlockRemoved += new BlockRemoveEventHandler(handleBlockRemoved);
         blocksService.Start();
+        blockTypeToGameObject = new Dictionary<int, GameObject>();
+        blockTypeToGameObject[0] = Block0;
+        blockTypeToGameObject[1] = Block1;
+        blockTypeToGameObject[2] = Block2;
+        blockTypeToGameObject[3] = Block3;
+        blockTypeToGameObject[4] = Block4;
+
+
+        blockUtilities = new BlockUtilities();
     }
 
     void handleBlockAdded(object sender, BlockAddEventArgs args)
     {
-        InstantiateBlock(args.BlockLocation);
+        currentBlockType = args.BlockTypeId;
+        InstantiateBlock(args.BlockLocation, args.BlockName);
     }
 
     void handleBlockRemoved(object sender, BlockRemoveEventArgs args)
     {
+        blocksService.WriteDebugMessage("handleBlockRemoved");
         RemoveBlock(args.Name);
     }
 
@@ -42,11 +62,15 @@ public class CharacterInput : MonoBehaviour
 
     public void RemoveBlock(string name)
     {
+        blocksService.WriteDebugMessage("RemoveBlock " + name);
         var block = getBlockByName(name);
         if (block != null)
         {
+            blocksService.WriteDebugMessage("Block found");
             blocks.Remove(block);
+            blocksService.WriteDebugMessage("Blocked removed from list");
             GameObject.Destroy(block);
+            blocksService.WriteDebugMessage("Block destroyed");
         }
     }
 
@@ -68,143 +92,52 @@ public class CharacterInput : MonoBehaviour
 
     public GameObject InstantiateBlock(Vector3 position)
     {
+        string blockName = System.Guid.NewGuid().ToString();
+        return InstantiateBlock(position, blockName);
+    }
+
+    public GameObject InstantiateBlock(Vector3 position, string blockName)
+    {
         if (blockExistsAtPoint(position))
         {
             return null;
         }
 
-        GameObject newBlock = (GameObject)Instantiate(MyBlock, position, Quaternion.identity);
-        newBlock.name = System.Guid.NewGuid().ToString();
+        GameObject currentBlock = blockTypeToGameObject[currentBlockType];
+        GameObject newBlock = (GameObject)Instantiate(currentBlock, position, Quaternion.identity);
+        newBlock.name = blockName;
         newBlock.tag = "my_block";
         blocks.Add(newBlock);
 
         return newBlock;
-    }
+    }    
 
     void placeBlockAtHitPoint(RaycastHit hit)
     {
-        Vector3 point = hit.point;
-        Vector3 MyNormal = hit.normal;
+        if(SnapFactors == null)
+            throw new UnityException("SnapFactors should not be null");
 
-        //this will convert that normal from being relative to global axis to relative to an
-        //objects local axis
-
-        MyNormal = hit.transform.TransformDirection(MyNormal);
-
-        //this next line will compare the normal hit to the normals of each plane to find the 
-        //side hit
-        float partialX = point.x / SnapFactors.x - Mathf.Floor(point.x / SnapFactors.x);
-        float partialY = point.y / SnapFactors.y - Mathf.Floor(point.y / SnapFactors.x);
-        float partialZ = point.z / SnapFactors.z - Mathf.Floor(point.z / SnapFactors.x);
-        Vector3 pointRounted = new Vector3();
-
-        if (MyNormal == hit.transform.up)
-        {
-            Debug.Log("top");
-            if (partialX > 0.5f)
-                pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            else
-                pointRounted.x = (float)(System.Math.Floor(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-
-            pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
-
-            if (partialZ > 0.5f)
-            {
-                pointRounted.z = (float)(System.Math.Ceiling(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-            else
-            {
-                pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-        }
-        else if (MyNormal == -hit.transform.up) //important note the use of the '-' sign this inverts the direction, -up == down. Down doesn't exist as a stored direction, you invert up to get it. 
-        {
-            Debug.Log("bottom");
-            if (partialX > 0.5f)
-                pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            else
-                pointRounted.x = (float)(System.Math.Floor(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-
-            pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y - OffsetFactors.y);
-
-            if (partialZ > 0.5f)
-            {
-                pointRounted.z = (float)(System.Math.Ceiling(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-            else
-            {
-                pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-        }
-        else if (MyNormal == hit.transform.right)
-        {
-            Debug.Log("hit from right");
-            pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
-            if (partialZ > 0.5f)
-            {
-                pointRounted.z = (float)(System.Math.Ceiling(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-            else
-            {
-                pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-        }
-        else if (MyNormal == -hit.transform.right) //note the '-' sign converting right to left
-        {
-            Debug.Log("hit from left");
-            pointRounted.x = (float)(System.Math.Floor(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
-
-            if (partialZ > 0.5f)
-            {
-                pointRounted.z = (float)(System.Math.Ceiling(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-            else
-            {
-                pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-            }
-        }
-        else if (MyNormal == -hit.transform.forward)
-        {
-            Debug.Log("hit from forward");
-            if (partialX > 0.5f)
-            {
-                pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            }
-            else
-            {
-                pointRounted.x = (float)(System.Math.Floor(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            }
-
-            pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
-            pointRounted.z = (float)(System.Math.Floor(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-
-        }
-        else if (MyNormal == hit.transform.forward)
-        {
-            Debug.Log("hit from behind");
-            if (partialX > 0.5f)
-            {
-                pointRounted.x = (float)(System.Math.Ceiling(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            }
-            else
-            {
-                pointRounted.x = (float)(System.Math.Floor(point.x / SnapFactors.x) * SnapFactors.x + OffsetFactors.x);
-            }
-
-            pointRounted.y = (float)(System.Math.Floor(point.y / SnapFactors.y) * SnapFactors.y + OffsetFactors.y);
-            pointRounted.z = (float)(System.Math.Ceiling(point.z / SnapFactors.z) * SnapFactors.z + OffsetFactors.z);
-        }
-
-        GameObject newBlock = InstantiateBlock(pointRounted);
-        blocksService.WriteBlockToDatabase(newBlock);
+        if(OffsetFactors == null)
+            throw new UnityException("OffsetFactors should not be null");
+            
+        Vector3 pointRounded = blockUtilities.CalculateRoundedPoint(hit, SnapFactors, OffsetFactors);
+        GameObject newBlock = InstantiateBlock(pointRounded);
+        blocksService.WriteBlockToDatabase(newBlock, currentBlockType);
     }
 
+    int currentBlockType = 0;
     void Update()
     {
         RaycastHit hit;
         Ray ray = Camera.main.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0.0f));
+
+        for(int i=0; i<5; i++){
+            int k = i + 1;
+            if (Input.GetKeyUp(k.ToString()))
+            {
+                currentBlockType = i;
+            }
+        }
 
         if (Physics.Raycast(ray, out hit))
         {

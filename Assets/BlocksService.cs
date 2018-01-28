@@ -4,11 +4,6 @@ using Firebase.Database;
 using Firebase.Unity.Editor;
 using UnityEngine;
 
-
-
-
-
-
 public class BlocksService
 {
     DatabaseReference databaseReference;
@@ -47,11 +42,12 @@ public class BlocksService
         float x = float.Parse(blockArray[1]);
         float y = float.Parse(blockArray[2]);
         float z = float.Parse(blockArray[3]);
-        string blockUserId = blockArray[4];
+        int blockTypeId = int.Parse(blockArray[4]);
+        string blockName = args.Snapshot.Key;
 
         Vector3 aPoint = new Vector3(x, y, z);
         if(BlockAdded != null){
-            BlockAdded(this, new BlockAddEventArgs(aPoint));
+            BlockAdded(this, new BlockAddEventArgs(aPoint, blockTypeId, blockName));
         }
     }
 
@@ -64,12 +60,13 @@ public class BlocksService
         }
 
         if(BlockRemoved != null){
+            WriteDebugMessage("HandleBlocksRemoved");
             BlockRemoved(this, new BlockRemoveEventArgs(args.Snapshot.Key));
         }
 
     }
 
-    public void WriteBlockToDatabase(GameObject aBlock)
+    public void WriteBlockToDatabase(GameObject aBlock, int blockTypeId)
     {
         if (aBlock == null)
             return;
@@ -78,7 +75,7 @@ public class BlocksService
             aBlock.transform.position.x,
             aBlock.transform.position.y,
             aBlock.transform.position.z,
-            0,
+            blockTypeId,
             _userId
         );
 
