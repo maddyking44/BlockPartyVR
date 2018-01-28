@@ -4,7 +4,7 @@ public class AppSettings
     {
         get
         {
-            return "https://block-party-13fbe.firebaseio.com/"; 
+            return "https://changeme.firebaseio.com/"; 
         }
     }
     
